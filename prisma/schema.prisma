@@ -1,0 +1,2370 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model companies {
+  id         BigInt         @id @default(autoincrement())
+  name       String?        @db.VarChar(255)
+  email      String?        @db.VarChar(255)
+  status     CompanyStatus?
+  created_at DateTime       @default(now()) @db.Timestamp(0)
+}
+
+model users {
+  id            BigInt        @id @default(autoincrement())
+  company_id    BigInt?
+  name          String?       @db.VarChar(255)
+  email         String?       @unique(map: "email") @db.VarChar(255)
+  phone         String?       @db.VarChar(20)
+  role          UserRole?
+  status        users_status?
+  password      String?       @db.VarChar(255)
+  profile_image String?       @db.VarChar(255)
+  created_at    DateTime      @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+}
+
+model groups {
+  id          BigInt   @id @default(autoincrement())
+  company_id  BigInt?
+  group_name  String?  @db.VarChar(100)
+  description String?  @db.Text
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+}
+
+model subgroups {
+  id            BigInt   @id @default(autoincrement())
+  group_id      BigInt?
+  subgroup_name String?  @db.VarChar(100)
+  description   String?  @db.Text
+  created_at    DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([group_id], map: "group_id")
+}
+
+model accounts {
+  id               BigInt                 @id @default(autoincrement())
+  parent_id        BigInt?
+  main_category    accounts_main_category
+  subgroup         String                 @db.VarChar(100)
+  account_name     String                 @db.VarChar(255)
+  account_number   String?                @db.VarChar(50)
+  ifsc_code        String?                @db.VarChar(20)
+  bank_name_branch String?                @db.VarChar(255)
+  is_active        Boolean?               @default(true)
+  created_by       BigInt?
+  updated_by       BigInt?
+  created_at       DateTime               @default(now()) @db.Timestamp(0)
+  updated_at       DateTime               @default(now()) @db.Timestamp(0)
+
+  @@index([created_by], map: "created_by")
+  @@index([parent_id], map: "parent_id")
+  @@index([updated_by], map: "updated_by")
+}
+
+model financial_years {
+  id         BigInt      @id @default(autoincrement())
+  company_id BigInt?
+  start_date DateTime?   @db.Date
+  end_date   DateTime?   @db.Date
+  status     YearStatus?
+
+  @@index([company_id], map: "company_id")
+}
+
+model vouchers {
+  id               BigInt                 @id @default(autoincrement())
+  company_id       BigInt?
+  voucher_type     vouchers_voucher_type?
+  company_name     String?                @db.VarChar(255)
+  company_logo     String?                @db.VarChar(255)
+  from_customer_id BigInt?
+  to_name          String?                @db.VarChar(255)
+  receipt_number   String?                @db.VarChar(50)
+  voucher_number   String?                @db.VarChar(50)
+  voucher_date     DateTime?              @db.Date
+  subtotal         Decimal?               @db.Decimal(15, 2)
+  total            Decimal?               @db.Decimal(15, 2)
+  notes            String?                @db.Text
+  created_by       BigInt?
+  created_at       DateTime               @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+  @@index([created_by], map: "created_by")
+  @@index([from_customer_id], map: "from_customer_id")
+}
+
+model voucher_entries {
+  id         BigInt   @id @default(autoincrement())
+  voucher_id BigInt?
+  account_id BigInt?
+  debit      Decimal? @db.Decimal(15, 2)
+  credit     Decimal? @db.Decimal(15, 2)
+  narration  String?  @db.Text
+
+  @@index([voucher_id], map: "voucher_id")
+}
+
+model transactions {
+  id               BigInt    @id @default(autoincrement())
+  voucher_entry_id BigInt?
+  account_id       BigInt?
+  txn_date         DateTime? @db.Date
+  debit            Decimal?  @db.Decimal(15, 2)
+  credit           Decimal?  @db.Decimal(15, 2)
+  created_at       DateTime  @default(now()) @db.Timestamp(0)
+
+  @@index([account_id], map: "account_id")
+  @@index([voucher_entry_id], map: "voucher_entry_id")
+}
+
+model taxes {
+  id          BigInt   @id @default(autoincrement())
+  company_id  BigInt?
+  tax_name    String?  @db.VarChar(100)
+  tax_type    TaxType?
+  rate        Decimal? @db.Decimal(5, 2)
+  description String?  @db.Text
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+}
+
+model discounts {
+  id               BigInt        @id @default(autoincrement())
+  voucher_entry_id BigInt?
+  discount_type    DiscountType?
+  amount           Decimal?      @db.Decimal(15, 2)
+  created_at       DateTime      @default(now()) @db.Timestamp(0)
+
+  @@index([voucher_entry_id], map: "voucher_entry_id")
+}
+
+model bills {
+  id                 BigInt      @id @default(autoincrement())
+  vendor_id          BigInt?
+  voucher_id         BigInt?
+  total_amount       Decimal?    @db.Decimal(15, 2)
+  outstanding_amount Decimal?    @db.Decimal(15, 2)
+  due_date           DateTime?   @db.Date
+  status             BillStatus?
+  created_at         DateTime    @default(now()) @db.Timestamp(0)
+
+  @@index([vendor_id], map: "vendor_id")
+  @@index([voucher_id], map: "voucher_id")
+}
+
+model bill_settlements {
+  id                 BigInt   @id @default(autoincrement())
+  bill_id            BigInt?
+  payment_voucher_id BigInt?
+  amount_paid        Decimal? @db.Decimal(15, 2)
+  discount_applied   Decimal? @db.Decimal(15, 2)
+  tds_deducted       Decimal? @db.Decimal(15, 2)
+  created_at         DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([bill_id], map: "bill_id")
+  @@index([payment_voucher_id], map: "payment_voucher_id")
+}
+
+model items {
+  id            BigInt   @id @default(autoincrement())
+  company_id    BigInt?
+  item_name     String?  @db.VarChar(255)
+  sku           String?  @db.VarChar(100)
+  hsn_code      String?  @db.VarChar(50)
+  unit          String?  @db.VarChar(50)
+  opening_stock Decimal? @db.Decimal(15, 2)
+  rate          Decimal? @db.Decimal(15, 2)
+  created_at    DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+}
+
+model voucher_items {
+  id           BigInt   @id @default(autoincrement())
+  voucher_id   BigInt?
+  item_id      BigInt?
+  qty          Decimal? @db.Decimal(15, 3)
+  rate         Decimal? @db.Decimal(15, 2)
+  discount     Decimal? @db.Decimal(15, 2)
+  tax_id       BigInt?
+  tax_amount   Decimal? @db.Decimal(15, 2)
+  total_amount Decimal? @db.Decimal(15, 2)
+
+  @@index([item_id], map: "item_id")
+  @@index([tax_id], map: "tax_id")
+  @@index([voucher_id], map: "voucher_id")
+}
+
+model attachments {
+  id           BigInt   @id @default(autoincrement())
+  voucher_id   BigInt?
+  quotation_id BigInt?
+  order_id     BigInt?
+  return_id    BigInt?
+  file_url     String?  @db.VarChar(255)
+  file_type    String?  @db.VarChar(50)
+  uploaded_by  BigInt?
+  created_at   DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([uploaded_by], map: "uploaded_by")
+}
+
+model audit_logs {
+  id         BigInt       @id @default(autoincrement())
+  user_id    BigInt?
+  table_name String?      @db.VarChar(100)
+  record_id  BigInt?
+  action     AuditAction?
+  old_value  String?      @db.Text
+  new_value  String?      @db.Text
+  created_at DateTime     @default(now()) @db.Timestamp(0)
+
+  @@index([user_id], map: "user_id")
+}
+
+model approvals {
+  id          BigInt          @id @default(autoincrement())
+  voucher_id  BigInt?
+  approver_id BigInt?
+  status      ApprovalStatus?
+  remarks     String?         @db.Text
+  approved_at DateTime        @default(now()) @db.Timestamp(0)
+
+  @@index([approver_id], map: "approver_id")
+  @@index([voucher_id], map: "voucher_id")
+}
+
+model workflows {
+  id            BigInt       @id @default(autoincrement())
+  company_id    BigInt?
+  voucher_type  VoucherType?
+  min_amount    Decimal?     @db.Decimal(15, 2)
+  approver_role String?      @db.VarChar(100)
+  level         Int?
+
+  @@index([company_id], map: "company_id")
+}
+
+model recurring_entries {
+  id                  BigInt           @id @default(autoincrement())
+  company_id          BigInt?
+  voucher_template_id BigInt?
+  frequency           Frequency?
+  next_run            DateTime?        @db.Date
+  end_date            DateTime?        @db.Date
+  status              RecurringStatus?
+
+  @@index([company_id], map: "company_id")
+  @@index([voucher_template_id], map: "voucher_template_id")
+}
+
+model notifications {
+  id         BigInt            @id @default(autoincrement())
+  company_id BigInt?
+  user_id    BigInt?
+  message    String?           @db.Text
+  type       NotificationType?
+  is_read    Boolean?
+  created_at DateTime          @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+  @@index([user_id], map: "user_id")
+}
+
+model plans {
+  id               BigInt        @id @default(autoincrement())
+  plan_name        String?       @db.VarChar(50)
+  currency         String?       @db.VarChar(3)
+  base_price       Decimal?      @db.Decimal(10, 2)
+  total_price      Decimal?      @db.Decimal(10, 2)
+  invoice_limit    Int?
+  user_limit       Int?
+  storage_capacity String?       @db.VarChar(20)
+  billing_cycle    BillingCycle?
+  status           PlanStatus?
+  created_at       DateTime      @default(now()) @db.Timestamp(0)
+}
+
+model requested_plans {
+  id           BigInt         @id @default(autoincrement())
+  company_id   BigInt?
+  plan_id      BigInt?
+  billing      BillingCycle?
+  request_date DateTime?      @db.Date
+  status       RequestStatus?
+  created_at   DateTime       @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+  @@index([plan_id], map: "plan_id")
+}
+
+model payment_gateway_settings {
+  id              BigInt         @id @default(autoincrement())
+  company_id      BigInt?
+  gateway_name    String?        @db.VarChar(50)
+  status          GatewayStatus?
+  api_key         String?        @db.VarChar(255)
+  publishable_key String?        @db.VarChar(255)
+  secret_key      String?        @db.VarChar(255)
+  webhook_url     String?        @db.VarChar(255)
+  environment     Environment?
+  updated_at      DateTime       @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+}
+
+model trial_balance {
+  id                BigInt       @id @default(autoincrement())
+  company_id        BigInt?
+  financial_year_id BigInt?
+  account_id        BigInt?
+  total_debit       Decimal?     @db.Decimal(15, 2)
+  total_credit      Decimal?     @db.Decimal(15, 2)
+  closing_balance   Decimal?     @db.Decimal(15, 2)
+  balance_type      BalanceType?
+  generated_at      DateTime     @default(now()) @db.Timestamp(0)
+
+  @@index([account_id], map: "account_id")
+  @@index([company_id], map: "company_id")
+  @@index([financial_year_id], map: "financial_year_id")
+}
+
+model profit_loss {
+  id                BigInt   @id @default(autoincrement())
+  company_id        BigInt?
+  financial_year_id BigInt?
+  period            String?  @db.VarChar(50)
+  total_income      Decimal? @db.Decimal(15, 2)
+  total_expense     Decimal? @db.Decimal(15, 2)
+  net_result        Decimal? @db.Decimal(15, 2)
+  generated_at      DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+  @@index([financial_year_id], map: "financial_year_id")
+}
+
+model balance_sheet {
+  id                BigInt    @id @default(autoincrement())
+  company_id        BigInt?
+  financial_year_id BigInt?
+  as_on_date        DateTime? @db.Date
+  total_assets      Decimal?  @db.Decimal(15, 2)
+  total_liabilities Decimal?  @db.Decimal(15, 2)
+  total_equity      Decimal?  @db.Decimal(15, 2)
+  generated_at      DateTime  @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+  @@index([financial_year_id], map: "financial_year_id")
+}
+
+model cash_flow {
+  id                BigInt   @id @default(autoincrement())
+  company_id        BigInt?
+  financial_year_id BigInt?
+  period            String?  @db.VarChar(50)
+  cash_in           Decimal? @db.Decimal(15, 2)
+  cash_out          Decimal? @db.Decimal(15, 2)
+  net_cash_flow     Decimal? @db.Decimal(15, 2)
+  generated_at      DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+  @@index([financial_year_id], map: "financial_year_id")
+}
+
+model customer_ledger {
+  id                BigInt                    @id @default(autoincrement())
+  customer_id       BigInt
+  date              DateTime                  @db.Date
+  particulars       String                    @db.VarChar(255)
+  vch_no            String?                   @db.VarChar(30)
+  manual_voucher_no String?                   @db.VarChar(30)
+  vch_type          customer_ledger_vch_type?
+  debit             Decimal?                  @default(0.00) @db.Decimal(15, 2)
+  credit            Decimal?                  @default(0.00) @db.Decimal(15, 2)
+  running_balance   Decimal                   @db.Decimal(15, 2)
+  created_at        DateTime                  @default(now()) @db.Timestamp(0)
+
+  @@index([customer_id, date], map: "idx_ledger_customer_date")
+  @@index([customer_id, vch_type, date], map: "idx_ledger_type_date")
+  @@index([vch_no], map: "idx_ledger_vchno")
+}
+
+model vendor_ledger {
+  id              BigInt         @id @default(autoincrement())
+  vendor_id       BigInt?
+  voucher_id      BigInt?
+  date            DateTime?      @db.Date
+  particulars     String?        @db.VarChar(255)
+  vch_no          String?        @db.VarChar(50)
+  vch_type        VendorVchType?
+  debit           Decimal?       @db.Decimal(15, 2)
+  credit          Decimal?       @db.Decimal(15, 2)
+  running_balance Decimal?       @db.Decimal(15, 2)
+  created_at      DateTime       @default(now()) @db.Timestamp(0)
+
+  @@index([vendor_id], map: "vendor_id")
+  @@index([voucher_id], map: "voucher_id")
+}
+
+model dashboard_summary {
+  id                BigInt   @id @default(autoincrement())
+  company_id        BigInt?
+  total_sales       Decimal? @db.Decimal(15, 2)
+  total_purchases   Decimal? @db.Decimal(15, 2)
+  total_receivables Decimal? @db.Decimal(15, 2)
+  total_payables    Decimal? @db.Decimal(15, 2)
+  total_expenses    Decimal? @db.Decimal(15, 2)
+  top_customer      String?  @db.VarChar(255)
+  low_stock_items   Int?
+  created_at        DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+}
+
+model add_transactions {
+  id               BigInt                         @id @default(autoincrement())
+  company_id       BigInt?
+  transaction_date DateTime?                      @db.Date
+  transaction_id   String?                        @unique(map: "transaction_id") @db.VarChar(50)
+  balance_type     add_transactions_balance_type?
+  voucher_type     add_transactions_voucher_type?
+  voucher_no       String?                        @db.VarChar(50)
+  amount           Decimal?                       @db.Decimal(15, 2)
+  from_account_id  BigInt?
+  to_account_id    BigInt?
+  customer_id      BigInt?
+  account_type     add_transactions_account_type?
+  note             String?                        @db.Text
+  created_at       DateTime                       @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+  @@index([customer_id], map: "customer_id")
+  @@index([from_account_id], map: "from_account_id")
+  @@index([to_account_id], map: "to_account_id")
+}
+
+model add_units {
+  id              BigInt   @id @default(autoincrement())
+  unit_of_measure String?  @db.VarChar(100)
+  created_at      DateTime @default(now()) @db.Timestamp(0)
+}
+
+model bank_details {
+  id             Int      @id @default(autoincrement())
+  bank_name      String   @db.VarChar(255)
+  account_no     String   @unique(map: "account_no") @db.VarChar(100)
+  account_holder String   @db.VarChar(255)
+  ifsc_code      String   @db.VarChar(50)
+  notes          String?  @db.Text
+  created_at     DateTime @default(now()) @db.Timestamp(0)
+  updated_at     DateTime @default(now()) @db.Timestamp(0)
+}
+
+model categories {
+  id            BigInt   @id @default(autoincrement())
+  company_id    BigInt?
+  category_name String?  @db.VarChar(100)
+  parent_id     BigInt?
+  description   String?  @db.Text
+  created_at    DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+  @@index([parent_id], map: "parent_id")
+}
+
+model company_settings {
+  id           BigInt   @id @default(autoincrement())
+  company_name String?  @db.VarChar(255)
+  address      String?  @db.Text
+  contact      String?  @db.VarChar(50)
+  gstin        String?  @db.VarChar(20)
+  created_at   DateTime @default(now()) @db.Timestamp(0)
+}
+
+model contra_vouchers {
+  id                BigInt                  @id @default(autoincrement())
+  company_id        BigInt?
+  auto_voucher_no   String?                 @db.VarChar(50)
+  manual_voucher_no String?                 @db.VarChar(50)
+  voucher_date      DateTime?               @db.Date
+  account_from_id   BigInt?
+  account_to_id     BigInt?
+  amount            Decimal?                @db.Decimal(15, 2)
+  upload_document   String?                 @db.VarChar(255)
+  narration         String?                 @db.Text
+  status            contra_vouchers_status? @default(Draft)
+  created_by        BigInt?
+  created_at        DateTime                @default(now()) @db.Timestamp(0)
+
+  @@index([account_from_id], map: "account_from_id")
+  @@index([account_to_id], map: "account_to_id")
+  @@index([company_id], map: "company_id")
+  @@index([created_by], map: "created_by")
+}
+
+model customer_balance_confirms {
+  id                   BigInt                                  @id @default(autoincrement())
+  customer_id          BigInt
+  as_of_date           DateTime                                @db.Date
+  opening_balance      Decimal?                                @default(0.00) @db.Decimal(15, 2)
+  total_debit          Decimal?                                @default(0.00) @db.Decimal(15, 2)
+  total_credit         Decimal?                                @default(0.00) @db.Decimal(15, 2)
+  current_balance      Decimal                                 @db.Decimal(15, 2)
+  balance_type         customer_balance_confirms_balance_type?
+  letter_pdf_path      String?                                 @db.VarChar(500)
+  status               customer_balance_confirms_status?       @default(draft)
+  confirmed_at         DateTime                                @default(now()) @db.Timestamp(0)
+  confirmed_by_user_id BigInt?
+  created_at           DateTime                                @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
+
+  @@index([customer_id, as_of_date], map: "idx_confirm_customer_date")
+}
+
+model customer_ledger_items {
+  id               BigInt   @id @default(autoincrement())
+  ledger_id        BigInt
+  item_name        String   @db.VarChar(255)
+  qty              Decimal  @db.Decimal(10, 3)
+  rate             Decimal  @db.Decimal(10, 2)
+  discount_percent Decimal? @default(0.00) @db.Decimal(5, 2)
+  tax_percent      Decimal? @default(0.00) @db.Decimal(5, 2)
+  tax_amount       Decimal? @default(0.00) @db.Decimal(10, 2)
+  value            Decimal  @db.Decimal(10, 2)
+  description      String?  @db.Text
+
+  @@index([ledger_id], map: "idx_ledger_item")
+}
+
+model customers {
+  id                  BigInt                  @id @default(autoincrement())
+  voucher_no          Int                     @unique(map: "voucher_no")
+  name_english        String                  @db.VarChar(255)
+  name_arabic         String?                 @db.VarChar(255)
+  company_name        String?                 @db.VarChar(255)
+  google_location     String?                 @db.VarChar(500)
+  id_card_image       String?                 @db.VarChar(255)
+  any_file            String?                 @db.VarChar(255)
+  account_type        customers_account_type? @default(Sundry_Debtors)
+  balance_type        customers_balance_type? @default(Debit)
+  account_name        String?                 @default("Accounts Receivable") @db.VarChar(100)
+  opening_balance     Decimal?                @default(0.00) @db.Decimal(15, 2)
+  creation_date       DateTime?               @db.Date
+  bank_account_number String?                 @db.VarChar(50)
+  bank_ifsc           String?                 @db.VarChar(20)
+  bank_name_branch    String?                 @db.VarChar(255)
+  country             String?                 @db.VarChar(100)
+  state               String?                 @db.VarChar(100)
+  pincode             String?                 @db.VarChar(10)
+  address             String?                 @db.Text
+  state_code          String?                 @db.VarChar(10)
+  shipping_address    String?                 @db.Text
+  phone               String?                 @db.VarChar(20)
+  email               String?                 @db.VarChar(255)
+  gstin               String?                 @db.VarChar(20)
+  credit_period_days  Int?                    @default(0)
+  is_active           Boolean?                @default(true)
+  created_at          DateTime                @default(now()) @db.Timestamp(0)
+  updated_at          DateTime?               @default(now()) @updatedAt @db.Timestamp(0)
+
+  @@index([email], map: "idx_cust_email")
+  @@index([name_english], map: "idx_cust_name")
+  @@index([phone], map: "idx_cust_phone")
+}
+
+model delivery_challan_items {
+  id            BigInt   @id @default(autoincrement())
+  challan_id    BigInt?
+  item_id       BigInt?
+  delivered_qty Decimal? @db.Decimal(15, 3)
+  rate          Decimal? @db.Decimal(15, 2)
+  tax_percent   Decimal? @db.Decimal(5, 2)
+  discount      Decimal? @db.Decimal(15, 2)
+  amount        Decimal? @db.Decimal(15, 2)
+
+  @@index([challan_id], map: "challan_id")
+  @@index([item_id], map: "item_id")
+}
+
+model delivery_challans {
+  id            BigInt                    @id @default(autoincrement())
+  company_id    BigInt?
+  order_id      BigInt?
+  challan_no    String?                   @db.VarChar(50)
+  manual_ref_no String?                   @db.VarChar(50)
+  challan_date  DateTime?                 @db.Date
+  driver_name   String?                   @db.VarChar(100)
+  driver_phone  String?                   @db.VarChar(20)
+  vehicle_no    String?                   @db.VarChar(50)
+  total_amount  Decimal?                  @db.Decimal(15, 2)
+  terms         String?                   @db.Text
+  status        delivery_challans_status?
+  created_by    BigInt?
+  created_at    DateTime                  @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+  @@index([created_by], map: "created_by")
+  @@index([order_id], map: "order_id")
+}
+
+model eway_bill_items {
+  id            BigInt   @id @default(autoincrement())
+  ewb_id        BigInt
+  product_id    BigInt?
+  product_name  String   @db.VarChar(255)
+  hsn_code      String?  @db.VarChar(20)
+  qty           Decimal  @db.Decimal(12, 3)
+  uqc           String?  @db.VarChar(20)
+  taxable_value Decimal  @db.Decimal(15, 2)
+  cgst_percent  Decimal? @default(0.00) @db.Decimal(5, 2)
+  sgst_percent  Decimal? @default(0.00) @db.Decimal(5, 2)
+  igst_percent  Decimal? @default(0.00) @db.Decimal(5, 2)
+  cgst_amount   Decimal? @default(0.00) @db.Decimal(15, 2)
+  sgst_amount   Decimal? @default(0.00) @db.Decimal(15, 2)
+  igst_amount   Decimal? @default(0.00) @db.Decimal(15, 2)
+  total_value   Decimal? @db.Decimal(15, 2)
+  remark        String?  @db.VarChar(255)
+
+  @@index([ewb_id], map: "idx_ewb_items_header")
+  @@index([product_id], map: "product_id")
+}
+
+model eway_bills {
+  id               BigInt                    @id @default(autoincrement())
+  company_id       BigInt
+  ewb_no           String                    @unique(map: "ewb_no") @db.VarChar(20)
+  generated_at     DateTime                  @default(now()) @db.Timestamp(0)
+  valid_from       DateTime                  @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
+  valid_upto       DateTime                  @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
+  doc_type         eway_bills_doc_type?
+  doc_no           String?                   @db.VarChar(50)
+  doc_date         DateTime?                 @db.Date
+  from_gstin       String?                   @db.VarChar(20)
+  from_trade_name  String?                   @db.VarChar(255)
+  from_address1    String?                   @db.VarChar(255)
+  from_address2    String?                   @db.VarChar(255)
+  from_place       String?                   @db.VarChar(100)
+  from_pincode     String?                   @db.VarChar(10)
+  from_state_code  String?                   @db.VarChar(5)
+  to_gstin         String?                   @db.VarChar(20)
+  to_trade_name    String?                   @db.VarChar(255)
+  to_address1      String?                   @db.VarChar(255)
+  to_address2      String?                   @db.VarChar(255)
+  to_place         String?                   @db.VarChar(100)
+  to_pincode       String?                   @db.VarChar(10)
+  to_state_code    String?                   @db.VarChar(5)
+  transporter_id   String?                   @db.VarChar(50)
+  transporter_name String?                   @db.VarChar(255)
+  transport_mode   eway_bills_transport_mode @default(Road)
+  vehicle_no       String?                   @db.VarChar(20)
+  distance_km      Int?
+  approx_value     Decimal?                  @default(0.00) @db.Decimal(15, 2)
+  taxable_value    Decimal?                  @default(0.00) @db.Decimal(15, 2)
+  igst_amount      Decimal?                  @default(0.00) @db.Decimal(15, 2)
+  cgst_amount      Decimal?                  @default(0.00) @db.Decimal(15, 2)
+  sgst_amount      Decimal?                  @default(0.00) @db.Decimal(15, 2)
+  status           eway_bills_status?        @default(Active)
+  cancel_reason    String?                   @db.VarChar(255)
+  cancelled_at     DateTime                  @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
+  created_by_user  BigInt?
+  created_at       DateTime                  @default(now()) @db.Timestamp(0)
+  updated_at       DateTime                  @default(now()) @db.Timestamp(0)
+
+  @@index([company_id, generated_at], map: "idx_ewb_company_date")
+  @@index([from_gstin, generated_at], map: "idx_ewb_from_gstin_date")
+  @@index([to_gstin, generated_at], map: "idx_ewb_to_gstin_date")
+}
+
+model expense_voucher_filters {
+  id                 BigInt                               @id @default(autoincrement())
+  expense_voucher_id BigInt?
+  filter_type        expense_voucher_filters_filter_type?
+  filter_value       String?                              @db.VarChar(255)
+  created_at         DateTime                             @default(now()) @db.Timestamp(0)
+
+  @@index([expense_voucher_id], map: "expense_voucher_id")
+}
+
+model expense_voucher_items {
+  id                 BigInt   @id @default(autoincrement())
+  expense_voucher_id BigInt?
+  account_id         BigInt?
+  amount             Decimal? @db.Decimal(15, 2)
+  narration          String?  @db.Text
+  created_at         DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([account_id], map: "account_id")
+  @@index([expense_voucher_id], map: "expense_voucher_id")
+}
+
+model expense_vouchers {
+  id                 BigInt                      @id @default(autoincrement())
+  company_id         BigInt?
+  auto_receipt_no    String?                     @db.VarChar(50)
+  manual_receipt_no  String?                     @db.VarChar(50)
+  voucher_date       DateTime?                   @db.Date
+  paid_from          expense_vouchers_paid_from?
+  paid_to_account_id BigInt?
+  total_amount       Decimal?                    @db.Decimal(15, 2)
+  voucher_narration  String?                     @db.Text
+  status             expense_vouchers_status?
+  created_by         BigInt?
+  created_at         DateTime                    @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+  @@index([created_by], map: "created_by")
+  @@index([paid_to_account_id], map: "paid_to_account_id")
+}
+
+model goods_receipt_items {
+  id               BigInt   @id @default(autoincrement())
+  goods_receipt_id BigInt?
+  order_item_id    BigInt?
+  item_id          BigInt?
+  item_name        String?  @db.VarChar(255)
+  ordered_qty      Decimal? @db.Decimal(15, 3)
+  received_qty     Decimal? @db.Decimal(15, 3)
+  pending_qty      Decimal? @db.Decimal(15, 3)
+  rate             Decimal? @db.Decimal(15, 2)
+  created_at       DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([goods_receipt_id], map: "goods_receipt_id")
+  @@index([item_id], map: "item_id")
+  @@index([order_item_id], map: "order_item_id")
+}
+
+model goods_receipts {
+  id                BigInt                 @id @default(autoincrement())
+  company_id        BigInt?
+  purchase_order_id BigInt?
+  grn_no            String?                @db.VarChar(50)
+  receipt_date      DateTime?              @db.Date
+  warehouse_id      BigInt?
+  grn_note          String?                @db.Text
+  received_by       BigInt?
+  signature_url     String?                @db.VarChar(255)
+  photo_url         String?                @db.VarChar(255)
+  status            goods_receipts_status?
+  created_at        DateTime               @default(now()) @db.Timestamp(0)
+  updated_at        DateTime               @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+  @@index([purchase_order_id], map: "purchase_order_id")
+  @@index([received_by], map: "received_by")
+  @@index([warehouse_id], map: "warehouse_id")
+}
+
+model gst_returns {
+  id            BigInt                  @id @default(autoincrement())
+  company_id    BigInt
+  period        String                  @db.VarChar(20)
+  return_type   gst_returns_return_type
+  due_date      DateTime                @db.Date
+  taxable_value Decimal?                @default(0.00) @db.Decimal(15, 2)
+  igst_amount   Decimal?                @default(0.00) @db.Decimal(15, 2)
+  cgst_amount   Decimal?                @default(0.00) @db.Decimal(15, 2)
+  sgst_amount   Decimal?                @default(0.00) @db.Decimal(15, 2)
+  status        gst_returns_status?     @default(Not_Filed)
+  filed_at      DateTime                @default(now()) @db.Timestamp(0)
+  filed_by_user BigInt?
+  remarks       String?                 @db.VarChar(500)
+  created_at    DateTime                @default(now()) @db.Timestamp(0)
+  updated_at    DateTime                @default(now()) @db.Timestamp(0)
+
+  @@unique([company_id, period, return_type], map: "ux_gst_period_type")
+}
+
+model income_voucher_filters {
+  id                BigInt                              @id @default(autoincrement())
+  income_voucher_id BigInt?
+  filter_type       income_voucher_filters_filter_type?
+  filter_value      String?                             @db.VarChar(255)
+  created_at        DateTime                            @default(now()) @db.Timestamp(0)
+
+  @@index([income_voucher_id], map: "income_voucher_id")
+}
+
+model income_voucher_items {
+  id                BigInt   @id @default(autoincrement())
+  income_voucher_id BigInt?
+  income_account_id BigInt?
+  amount            Decimal? @db.Decimal(15, 2)
+  row_narration     String?  @db.Text
+  created_at        DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([income_account_id], map: "income_account_id")
+  @@index([income_voucher_id], map: "income_voucher_id")
+}
+
+model income_vouchers {
+  id                BigInt                        @id @default(autoincrement())
+  company_id        BigInt?
+  auto_receipt_no   String?                       @db.VarChar(50)
+  manual_receipt_no String?                       @db.VarChar(50)
+  voucher_date      DateTime?                     @db.Date
+  deposited_to      income_vouchers_deposited_to?
+  received_from_id  BigInt?
+  total_amount      Decimal?                      @db.Decimal(15, 2)
+  voucher_narration String?                       @db.Text
+  status            income_vouchers_status?
+  created_by        BigInt?
+  created_at        DateTime                      @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+  @@index([created_by], map: "created_by")
+  @@index([received_from_id], map: "received_from_id")
+}
+
+model inventory_ledger {
+  id               BigInt                             @id @default(autoincrement())
+  product_id       BigInt?
+  warehouse_id     BigInt?
+  transaction_type inventory_ledger_transaction_type?
+  ref_voucher_id   BigInt?
+  qty_in           Decimal?                           @db.Decimal(15, 3)
+  qty_out          Decimal?                           @db.Decimal(15, 3)
+  balance_qty      Decimal?                           @db.Decimal(15, 3)
+  rate             Decimal?                           @db.Decimal(15, 2)
+  value            Decimal?                           @db.Decimal(15, 2)
+  created_at       DateTime                           @default(now()) @db.Timestamp(0)
+
+  @@index([product_id], map: "product_id")
+  @@index([ref_voucher_id], map: "ref_voucher_id")
+  @@index([warehouse_id], map: "warehouse_id")
+}
+
+model invoice_items {
+  id              BigInt                       @id @default(autoincrement())
+  invoice_id      BigInt?
+  product_name    String?                      @db.VarChar(255)
+  price           Decimal?                     @db.Decimal(15, 2)
+  qty             Int?
+  tax_amount      Decimal?                     @db.Decimal(15, 2)
+  tax_rate        Decimal?                     @db.Decimal(5, 2)
+  discount_amount Decimal?                     @db.Decimal(15, 2)
+  discount_type   invoice_items_discount_type?
+  total_amount    Decimal?                     @db.Decimal(15, 2)
+
+  @@index([invoice_id], map: "invoice_id")
+}
+
+model invoices {
+  id             BigInt                   @id @default(autoincrement())
+  invoice_no     String?                  @unique(map: "invoice_no") @db.VarChar(50)
+  reference_no   String?                  @db.VarChar(50)
+  customer_id    BigInt?
+  gross_amount   Decimal?                 @db.Decimal(15, 2)
+  invoice_date   DateTime?                @db.Date
+  due_date       DateTime?                @db.Date
+  terms          String?                  @db.VarChar(255)
+  status         invoices_status?
+  payment_status invoices_payment_status?
+  payment_method invoices_payment_method?
+  notes          String?                  @db.Text
+  created_at     DateTime                 @default(now()) @db.Timestamp(0)
+
+  @@index([customer_id], map: "customer_id")
+}
+
+model itc_entries {
+  id             BigInt              @id @default(autoincrement())
+  company_id     BigInt
+  vendor_id      BigInt?
+  vendor_name    String?             @db.VarChar(255)
+  vendor_gstin   String?             @db.VarChar(20)
+  invoice_no     String              @db.VarChar(50)
+  invoice_date   DateTime            @db.Date
+  invoice_amount Decimal             @db.Decimal(15, 2)
+  cgst_amount    Decimal?            @default(0.00) @db.Decimal(15, 2)
+  sgst_amount    Decimal?            @default(0.00) @db.Decimal(15, 2)
+  igst_amount    Decimal?            @default(0.00) @db.Decimal(15, 2)
+  total_itc      Decimal?            @default(0.00) @db.Decimal(15, 2)
+  status         itc_entries_status? @default(Pending)
+  claimed_at     DateTime            @default(now()) @db.Timestamp(0)
+  note           String?             @db.VarChar(255)
+  created_at     DateTime            @default(now()) @db.Timestamp(0)
+  updated_at     DateTime            @default(now()) @db.Timestamp(0)
+
+  @@unique([company_id, vendor_gstin, invoice_no], map: "ux_itc_vendor_invoice")
+  @@index([company_id, status, invoice_date], map: "idx_itc_status_date")
+  @@index([vendor_id], map: "vendor_id")
+}
+
+model ledger_entries {
+  id              BigInt                   @id @default(autoincrement())
+  account_id      BigInt?
+  date            DateTime?                @db.Date
+  particulars     String?                  @db.VarChar(255)
+  vch_no          String?                  @db.VarChar(20)
+  ref_no          String?                  @db.VarChar(20)
+  vch_type        ledger_entries_vch_type?
+  debit           Decimal?                 @default(0.00) @db.Decimal(15, 2)
+  credit          Decimal?                 @default(0.00) @db.Decimal(15, 2)
+  running_balance Decimal?                 @db.Decimal(15, 2)
+  created_at      DateTime                 @default(now()) @db.Timestamp(0)
+
+  @@index([account_id], map: "account_id")
+}
+
+model modules {
+  id          BigInt   @id @default(autoincrement())
+  module_name String?  @unique(map: "module_name") @db.VarChar(100)
+  description String?  @db.Text
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+}
+
+model order_headers {
+  id               BigInt                   @id @default(autoincrement())
+  company_id       BigInt?
+  order_type       order_headers_order_type
+  customer_id      BigInt?
+  vendor_id        BigInt?
+  order_no         String?                  @db.VarChar(50)
+  manual_order_no  String?                  @db.VarChar(50)
+  order_date       DateTime?                @db.Date
+  sub_total        Decimal?                 @db.Decimal(18, 2)
+  total_tax        Decimal?                 @db.Decimal(18, 2)
+  total_discount   Decimal?                 @db.Decimal(18, 2)
+  grand_total      Decimal?                 @db.Decimal(18, 2)
+  notes            String?                  @db.Text
+  terms_conditions String?                  @db.Text
+  bank_name        String?                  @db.VarChar(255)
+  account_number   String?                  @db.VarChar(50)
+  account_holder   String?                  @db.VarChar(255)
+  ifsc_code        String?                  @db.VarChar(20)
+  status           order_headers_status?
+  created_by       BigInt?
+  created_at       DateTime                 @default(now()) @db.Timestamp(0)
+  updated_at       DateTime                 @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+  @@index([created_by], map: "created_by")
+  @@index([customer_id], map: "customer_id")
+  @@index([vendor_id], map: "vendor_id")
+}
+
+model order_items {
+  id               BigInt   @id @default(autoincrement())
+  order_id         BigInt?
+  item_id          BigInt?
+  item_name        String?  @db.VarChar(255)
+  qty              Decimal? @db.Decimal(15, 3)
+  rate             Decimal? @db.Decimal(15, 2)
+  tax_percent      Decimal? @db.Decimal(5, 2)
+  discount_percent Decimal? @db.Decimal(5, 2)
+  discount_amount  Decimal? @db.Decimal(15, 2)
+  tax_amount       Decimal? @db.Decimal(15, 2)
+  amount           Decimal? @db.Decimal(18, 2)
+  created_at       DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([item_id], map: "item_id")
+}
+
+model permissions {
+  id          BigInt  @id @default(autoincrement())
+  name        String? @db.VarChar(100)
+  description String? @db.Text
+}
+
+model pos_order_items {
+  id                BigInt   @id @default(autoincrement())
+  order_id          BigInt
+  product_id        BigInt?
+  product_sku       String?  @db.VarChar(64)
+  product_name      String?  @db.VarChar(255)
+  uom               String?  @db.VarChar(50)
+  warehouse_id      BigInt
+  qty               Decimal  @db.Decimal(12, 3)
+  unit_price        Decimal  @db.Decimal(15, 4)
+  line_discount_pct Decimal? @default(0.00) @db.Decimal(5, 2)
+  line_discount_amt Decimal? @default(0.00) @db.Decimal(15, 2)
+  line_subtotal     Decimal? @default(0.00) @db.Decimal(15, 2)
+  tax_percent       Decimal? @default(0.00) @db.Decimal(5, 2)
+  tax_amount        Decimal? @default(0.00) @db.Decimal(15, 2)
+  line_total        Decimal? @default(0.00) @db.Decimal(15, 2)
+  remark            String?  @db.VarChar(255)
+  created_at        DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([order_id], map: "idx_pos_items_order")
+  @@index([warehouse_id, product_id, order_id], map: "idx_pos_items_wh_prod")
+  @@index([product_id], map: "product_id")
+}
+
+model pos_orders {
+  id               BigInt                     @id @default(autoincrement())
+  order_no         String                     @unique(map: "order_no") @db.VarChar(30)
+  order_datetime   DateTime                   @default(now()) @db.Timestamp(0)
+  customer_id      BigInt?
+  currency_code    String?                    @db.VarChar(10)
+  subtotal         Decimal?                   @default(0.00) @db.Decimal(15, 2)
+  discount_total   Decimal?                   @default(0.00) @db.Decimal(15, 2)
+  tax_class_id     BigInt?
+  tax_percent      Decimal?                   @default(0.00) @db.Decimal(5, 2)
+  tax_amount       Decimal?                   @default(0.00) @db.Decimal(15, 2)
+  round_off        Decimal?                   @default(0.00) @db.Decimal(6, 2)
+  grand_total      Decimal?                   @default(0.00) @db.Decimal(15, 2)
+  amount_paid      Decimal?                   @default(0.00) @db.Decimal(15, 2)
+  amount_due       Decimal?                   @default(0.00) @db.Decimal(15, 2)
+  payment_status   pos_orders_payment_status? @default(Due)
+  notes            String?                    @db.Text
+  sales_invoice_id BigInt?
+  created_by_user  BigInt?
+  updated_by_user  BigInt?
+  created_at       DateTime                   @default(now()) @db.Timestamp(0)
+  updated_at       DateTime                   @default(now()) @db.Timestamp(0)
+
+  @@index([customer_id, order_datetime], map: "idx_pos_order_customer_date")
+  @@index([tax_class_id], map: "tax_class_id")
+}
+
+model pos_payments {
+  id               BigInt               @id @default(autoincrement())
+  order_id         BigInt
+  method           pos_payments_method
+  amount           Decimal              @db.Decimal(15, 2)
+  paid_at          DateTime             @default(now()) @db.Timestamp(0)
+  reference_no     String?              @db.VarChar(100)
+  status           pos_payments_status? @default(completed)
+  cash_tendered    Decimal?             @db.Decimal(15, 2)
+  change_returned  Decimal?             @db.Decimal(15, 2)
+  received_by_user BigInt?
+  note             String?              @db.VarChar(255)
+
+  @@index([order_id, paid_at], map: "idx_pos_payment_order_date")
+}
+
+model product_import_export_logs {
+  id            BigInt                             @id @default(autoincrement())
+  company_id    BigInt?
+  file_name     String?                            @db.VarChar(255)
+  action        product_import_export_logs_action?
+  total_records Int?
+  success_count Int?
+  failed_count  Int?
+  processed_by  BigInt?
+  created_at    DateTime                           @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+  @@index([processed_by], map: "processed_by")
+}
+
+model products {
+  id             BigInt           @id @default(autoincrement())
+  company_id     BigInt?
+  warehouse_id   BigInt?
+  category_id    BigInt?
+  unit_id        BigInt?
+  product_name   String?          @db.VarChar(255)
+  sku            String?          @db.VarChar(100)
+  hsn_code       String?          @db.VarChar(50)
+  barcode        String?          @db.VarChar(100)
+  brand          String?          @db.VarChar(100)
+  model_no       String?          @db.VarChar(100)
+  color          String?          @db.VarChar(50)
+  material       String?          @db.VarChar(100)
+  size           String?          @db.VarChar(50)
+  stock_quantity Decimal?         @db.Decimal(15, 3)
+  reorder_level  Decimal?         @db.Decimal(15, 3)
+  purchase_rate  Decimal?         @db.Decimal(15, 2)
+  selling_rate   Decimal?         @db.Decimal(15, 2)
+  tax_id         BigInt?
+  status         products_status?
+  created_at     DateTime         @default(now()) @db.Timestamp(0)
+
+  @@index([category_id], map: "category_id")
+  @@index([company_id], map: "company_id")
+  @@index([tax_id], map: "tax_id")
+  @@index([unit_id], map: "unit_id")
+  @@index([warehouse_id], map: "warehouse_id")
+}
+
+model purchase_bills {
+  id                 BigInt                 @id @default(autoincrement())
+  company_id         BigInt?
+  vendor_id          BigInt?
+  bill_no            String?                @db.VarChar(50)
+  bill_date          DateTime?              @db.Date
+  due_date           DateTime?              @db.Date
+  total_amount       Decimal?               @db.Decimal(18, 2)
+  outstanding_amount Decimal?               @db.Decimal(18, 2)
+  status             purchase_bills_status?
+  notes              String?                @db.Text
+  terms_conditions   String?                @db.Text
+  attachment_urls    String?                @db.LongText
+  created_by         BigInt?
+  created_at         DateTime               @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+  @@index([created_by], map: "created_by")
+  @@index([vendor_id], map: "vendor_id")
+}
+
+model purchase_quotations {
+  id               BigInt                      @id @default(autoincrement())
+  company_id       BigInt?
+  vendor_id        BigInt?
+  reference_no     String?                     @db.VarChar(50)
+  manual_ref_no    String?                     @db.VarChar(50)
+  quotation_no     String?                     @db.VarChar(50)
+  quotation_date   DateTime?                   @db.Date
+  valid_till       DateTime?                   @db.Date
+  sub_total        Decimal?                    @db.Decimal(18, 2)
+  total_tax        Decimal?                    @db.Decimal(18, 2)
+  total_discount   Decimal?                    @db.Decimal(18, 2)
+  grand_total      Decimal?                    @db.Decimal(18, 2)
+  notes            String?                     @db.Text
+  terms_conditions String?                     @db.Text
+  bank_name        String?                     @db.VarChar(255)
+  account_number   String?                     @db.VarChar(50)
+  account_holder   String?                     @db.VarChar(255)
+  ifsc_code        String?                     @db.VarChar(20)
+  signature_url    String?                     @db.VarChar(255)
+  photo_url        String?                     @db.VarChar(255)
+  status           purchase_quotations_status? @default(Draft)
+  created_by       BigInt?
+  created_at       DateTime                    @default(now()) @db.Timestamp(0)
+  updated_at       DateTime                    @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+  @@index([created_by], map: "created_by")
+  @@index([vendor_id], map: "vendor_id")
+}
+
+model purchase_report {
+  id          BigInt    @id @default(autoincrement())
+  choose_date DateTime? @db.Date
+  vendor_id   BigInt?
+  category    String?   @db.VarChar(100)
+  created_at  DateTime  @default(now()) @db.Timestamp(0)
+
+  @@index([vendor_id], map: "vendor_id")
+}
+
+model receipt_discounts {
+  id                        BigInt                           @id @default(autoincrement())
+  receipt_id                BigInt?
+  discount_type             receipt_discounts_discount_type?
+  discount_percent          Decimal?                         @db.Decimal(6, 3)
+  sub_total_before_discount Decimal?                         @db.Decimal(15, 2)
+  discount_value            Decimal?                         @db.Decimal(15, 2)
+  sub_total_after_discount  Decimal?                         @db.Decimal(15, 2)
+  total_amount              Decimal?                         @db.Decimal(15, 2)
+  narration                 String?                          @db.Text
+  created_at                DateTime                         @default(now()) @db.Timestamp(0)
+
+  @@index([receipt_id], map: "receipt_id")
+}
+
+model receipt_invoice_payments {
+  id                   BigInt   @id @default(autoincrement())
+  receipt_id           BigInt?
+  account_id           BigInt?
+  description          String?  @db.VarChar(255)
+  total_invoice_amount Decimal? @db.Decimal(15, 2)
+  outstanding_amount   Decimal? @db.Decimal(15, 2)
+  pay_amount           Decimal? @db.Decimal(15, 2)
+  is_selected          Boolean?
+  advance_payment      Decimal? @db.Decimal(15, 2)
+  final_amount         Decimal? @db.Decimal(15, 2)
+  created_at           DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([account_id], map: "account_id")
+  @@index([receipt_id], map: "receipt_id")
+}
+
+model receipt_taxes {
+  id           BigInt   @id @default(autoincrement())
+  receipt_id   BigInt?
+  tax_percent  Decimal? @db.Decimal(6, 3)
+  sub_total    Decimal? @db.Decimal(15, 2)
+  total_amount Decimal? @db.Decimal(15, 2)
+  narration    String?  @db.Text
+  created_at   DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([receipt_id], map: "receipt_id")
+}
+
+model received_from_customer {
+  id                BigInt                                @id @default(autoincrement())
+  company_id        BigInt?
+  receipt_no_auto   String?                               @db.VarChar(50)
+  receipt_no_manual String?                               @db.VarChar(50)
+  voucher_date      DateTime?                             @db.Date
+  received_into     received_from_customer_received_into?
+  received_from     BigInt?
+  upload_document   String?                               @db.VarChar(255)
+  receipt_type      received_from_customer_receipt_type?
+  narration         String?                               @db.Text
+  sub_total         Decimal?                              @db.Decimal(15, 2)
+  total_amount      Decimal?                              @db.Decimal(15, 2)
+  created_by        BigInt?
+  created_at        DateTime                              @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+  @@index([created_by], map: "created_by")
+  @@index([received_from], map: "received_from")
+}
+
+model return_items {
+  id              BigInt                      @id @default(autoincrement())
+  return_id       BigInt?
+  product_id      BigInt?
+  qty             Decimal?                    @db.Decimal(15, 2)
+  rate            Decimal?                    @db.Decimal(15, 2)
+  tax_id          BigInt?
+  tax_amount      Decimal?                    @db.Decimal(15, 2)
+  discount_amount Decimal?                    @db.Decimal(15, 2)
+  discount_type   return_items_discount_type?
+  total_amount    Decimal?                    @db.Decimal(15, 2)
+
+  @@index([product_id], map: "product_id")
+  @@index([return_id], map: "return_id")
+  @@index([tax_id], map: "tax_id")
+}
+
+model returns {
+  id           BigInt               @id @default(autoincrement())
+  return_no    String?              @unique(map: "return_no") @db.VarChar(50)
+  reference_no String?              @db.VarChar(50)
+  invoice_no   String?              @db.VarChar(50)
+  return_date  DateTime?            @db.Date
+  return_type  returns_return_type?
+  customer_id  BigInt?
+  vendor_id    BigInt?
+  warehouse_id BigInt?
+  reason       String?              @db.Text
+  status       returns_status?
+  created_at   DateTime             @default(now()) @db.Timestamp(0)
+
+  @@index([customer_id], map: "customer_id")
+  @@index([vendor_id], map: "vendor_id")
+  @@index([warehouse_id], map: "warehouse_id")
+}
+
+model role_history {
+  id              BigInt   @id @default(autoincrement())
+  role_id         BigInt?
+  changed_by      BigInt?
+  old_permissions String?  @db.Text
+  new_permissions String?  @db.Text
+  changed_at      DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([changed_by], map: "changed_by")
+  @@index([role_id], map: "role_id")
+}
+
+model role_permissions {
+  id            BigInt   @id @default(autoincrement())
+  role_id       BigInt?
+  module_id     BigInt?
+  permission_id BigInt?
+  granted       Boolean?
+  created_at    DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([module_id], map: "module_id")
+  @@index([permission_id], map: "permission_id")
+  @@index([role_id], map: "role_id")
+}
+
+model roles {
+  id         BigInt           @id @default(autoincrement())
+  role_name  String?          @unique(map: "role_name") @db.VarChar(100)
+  role_type  roles_role_type?
+  status     roles_status?
+  created_at DateTime         @default(now()) @db.Timestamp(0)
+  updated_at DateTime         @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
+}
+
+model sales_attachments {
+  id             BigInt                            @id @default(autoincrement())
+  reference_type sales_attachments_reference_type?
+  reference_id   BigInt?
+  file_url       String?                           @db.VarChar(255)
+  file_type      String?                           @db.VarChar(50)
+  uploaded_by    BigInt?
+  created_at     DateTime                          @default(now()) @db.Timestamp(0)
+
+  @@index([uploaded_by], map: "uploaded_by")
+}
+
+model sales_invoice_items {
+  id          BigInt   @id @default(autoincrement())
+  invoice_id  BigInt?
+  item_id     BigInt?
+  qty         Decimal? @db.Decimal(15, 3)
+  rate        Decimal? @db.Decimal(15, 2)
+  tax_percent Decimal? @db.Decimal(5, 2)
+  discount    Decimal? @db.Decimal(15, 2)
+  amount      Decimal? @db.Decimal(15, 2)
+
+  @@index([invoice_id], map: "invoice_id")
+  @@index([item_id], map: "item_id")
+}
+
+model sales_invoices {
+  id              BigInt                 @id @default(autoincrement())
+  company_id      BigInt?
+  order_id        BigInt?
+  challan_id      BigInt?
+  invoice_no      String?                @db.VarChar(50)
+  manual_ref_no   String?                @db.VarChar(50)
+  invoice_date    DateTime?              @db.Date
+  due_date        DateTime?              @db.Date
+  total_amount    Decimal?               @db.Decimal(15, 2)
+  tax_amount      Decimal?               @db.Decimal(15, 2)
+  discount_amount Decimal?               @db.Decimal(15, 2)
+  grand_total     Decimal?               @db.Decimal(15, 2)
+  terms           String?                @db.Text
+  notes           String?                @db.Text
+  status          sales_invoices_status?
+  created_by      BigInt?
+  created_at      DateTime               @default(now()) @db.Timestamp(0)
+
+  @@index([challan_id], map: "challan_id")
+  @@index([company_id], map: "company_id")
+  @@index([created_by], map: "created_by")
+  @@index([order_id], map: "order_id")
+}
+
+model sales_order_items {
+  id          BigInt   @id @default(autoincrement())
+  order_id    BigInt?
+  item_id     BigInt?
+  qty         Decimal? @db.Decimal(15, 3)
+  rate        Decimal? @db.Decimal(15, 2)
+  tax_percent Decimal? @db.Decimal(5, 2)
+  discount    Decimal? @db.Decimal(15, 2)
+  amount      Decimal? @db.Decimal(15, 2)
+
+  @@index([item_id], map: "item_id")
+  @@index([order_id], map: "order_id")
+}
+
+model sales_orders {
+  id               BigInt               @id @default(autoincrement())
+  company_id       BigInt?
+  quotation_id     BigInt?
+  order_no         String?              @db.VarChar(50)
+  manual_ref_no    String?              @db.VarChar(50)
+  order_date       DateTime?            @db.Date
+  total_amount     Decimal?             @db.Decimal(15, 2)
+  tax_amount       Decimal?             @db.Decimal(15, 2)
+  discount_amount  Decimal?             @db.Decimal(15, 2)
+  grand_total      Decimal?             @db.Decimal(15, 2)
+  billing_name     String?              @db.VarChar(255)
+  billing_address  String?              @db.Text
+  shipping_name    String?              @db.VarChar(255)
+  shipping_address String?              @db.Text
+  terms            String?              @db.Text
+  status           sales_orders_status?
+  created_by       BigInt?
+  created_at       DateTime             @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+  @@index([created_by], map: "created_by")
+  @@index([quotation_id], map: "quotation_id")
+}
+
+model sales_payments {
+  id                   BigInt                         @id @default(autoincrement())
+  company_id           BigInt?
+  invoice_id           BigInt?
+  payment_no           String?                        @db.VarChar(50)
+  manual_ref_no        String?                        @db.VarChar(50)
+  payment_date         DateTime?                      @db.Date
+  payment_method       sales_payments_payment_method?
+  total_invoice_amount Decimal?                       @db.Decimal(15, 2)
+  amount_received      Decimal?                       @db.Decimal(15, 2)
+  balance_amount       Decimal?                       @db.Decimal(15, 2)
+  notes                String?                        @db.Text
+  status               sales_payments_status?
+  created_by           BigInt?
+  created_at           DateTime                       @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+  @@index([created_by], map: "created_by")
+  @@index([invoice_id], map: "invoice_id")
+}
+
+model sales_quotation_items {
+  id           BigInt   @id @default(autoincrement())
+  quotation_id BigInt?
+  item_id      BigInt?
+  qty          Decimal? @db.Decimal(15, 3)
+  rate         Decimal? @db.Decimal(15, 2)
+  tax_percent  Decimal? @db.Decimal(5, 2)
+  discount     Decimal? @db.Decimal(15, 2)
+  amount       Decimal? @db.Decimal(15, 2)
+
+  @@index([item_id], map: "item_id")
+  @@index([quotation_id], map: "quotation_id")
+}
+
+model sales_quotations {
+  id              BigInt                   @id @default(autoincrement())
+  company_id      BigInt?
+  customer_id     BigInt?
+  quotation_no    String?                  @db.VarChar(50)
+  manual_ref_no   String?                  @db.VarChar(50)
+  quotation_date  DateTime?                @db.Date
+  valid_till      DateTime?                @db.Date
+  total_amount    Decimal?                 @db.Decimal(15, 2)
+  tax_amount      Decimal?                 @db.Decimal(15, 2)
+  discount_amount Decimal?                 @db.Decimal(15, 2)
+  grand_total     Decimal?                 @db.Decimal(15, 2)
+  notes           String?                  @db.Text
+  terms           String?                  @db.Text
+  status          sales_quotations_status?
+  created_by      BigInt?
+  created_at      DateTime                 @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+  @@index([created_by], map: "created_by")
+  @@index([customer_id], map: "customer_id")
+}
+
+model sales_report {
+  id          BigInt                 @id @default(autoincrement())
+  choose_date DateTime?              @db.Date
+  category    sales_report_category?
+  customer_id BigInt?
+  product_id  BigInt?
+  created_at  DateTime               @default(now()) @db.Timestamp(0)
+
+  @@index([customer_id], map: "customer_id")
+  @@index([product_id], map: "product_id")
+}
+
+model sales_return_audit {
+  id              BigInt                     @id @default(autoincrement())
+  sales_return_id BigInt?
+  action          sales_return_audit_action?
+  remarks         String?                    @db.Text
+  user_id         BigInt?
+  created_at      DateTime                   @default(now()) @db.Timestamp(0)
+
+  @@index([sales_return_id], map: "sales_return_id")
+  @@index([user_id], map: "user_id")
+}
+
+model sales_return_items {
+  id              BigInt   @id @default(autoincrement())
+  sales_return_id BigInt?
+  product_id      BigInt?
+  qty_returned    Decimal? @db.Decimal(15, 3)
+  unit_rate       Decimal? @db.Decimal(15, 2)
+  amount          Decimal? @db.Decimal(15, 2)
+  created_at      DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([product_id], map: "product_id")
+  @@index([sales_return_id], map: "sales_return_id")
+}
+
+model sales_returns {
+  id                BigInt                     @id @default(autoincrement())
+  company_id        BigInt?
+  reference_id      String?                    @db.VarChar(50)
+  manual_voucher_no String?                    @db.VarChar(50)
+  auto_voucher_no   String?                    @db.VarChar(50)
+  return_no         String?                    @db.VarChar(50)
+  invoice_id        BigInt?
+  customer_id       BigInt?
+  warehouse_id      BigInt?
+  return_date       DateTime?                  @db.Date
+  return_type       sales_returns_return_type?
+  reason_for_return String?                    @db.Text
+  total_items       Int?
+  total_value       Decimal?                   @db.Decimal(15, 2)
+  status            sales_returns_status?
+  created_by        BigInt?
+  created_at        DateTime                   @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+  @@index([created_by], map: "created_by")
+  @@index([customer_id], map: "customer_id")
+  @@index([invoice_id], map: "invoice_id")
+}
+
+model services {
+  id                      BigInt   @id @default(autoincrement())
+  company_id              BigInt?
+  service_name            String?  @db.VarChar(255)
+  sku                     String?  @db.VarChar(100)
+  description             String?  @db.Text
+  unit                    String?  @db.VarChar(50)
+  price                   Decimal? @db.Decimal(15, 2)
+  default_tax_rate        Decimal? @db.Decimal(5, 2)
+  is_available_in_invoice Boolean? @default(true)
+  remarks                 String?  @db.Text
+  created_at              DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+}
+
+model stock_transfer_items {
+  id                  BigInt   @id @default(autoincrement())
+  stock_transfer_id   BigInt?
+  item_id             BigInt?
+  source_warehouse_id BigInt?
+  qty                 Decimal  @db.Decimal(15, 3)
+  rate                Decimal  @db.Decimal(15, 2)
+  amount              Decimal  @db.Decimal(15, 2)
+  narration           String?  @db.Text
+  created_at          DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([item_id], map: "item_id")
+  @@index([source_warehouse_id], map: "source_warehouse_id")
+  @@index([stock_transfer_id], map: "stock_transfer_id")
+}
+
+model stock_transfers {
+  id                       BigInt                  @id @default(autoincrement())
+  company_id               BigInt?
+  system_voucher_no        String                  @db.VarChar(50)
+  manual_voucher_no        String?                 @db.VarChar(50)
+  voucher_date             DateTime                @db.Date
+  source_warehouse_id      BigInt?
+  destination_warehouse_id BigInt?
+  narration                String?                 @db.Text
+  additional_note          String?                 @db.Text
+  total_amount             Decimal?                @default(0.00) @db.Decimal(15, 2)
+  status                   stock_transfers_status? @default(Draft)
+  created_by               BigInt?
+  created_at               DateTime                @default(now()) @db.Timestamp(0)
+  updated_at               DateTime                @default(now()) @db.Timestamp(0)
+  voucher_id               BigInt?
+
+  @@index([company_id], map: "company_id")
+  @@index([created_by], map: "created_by")
+  @@index([destination_warehouse_id], map: "destination_warehouse_id")
+  @@index([source_warehouse_id], map: "source_warehouse_id")
+  @@index([voucher_id], map: "voucher_id")
+}
+
+model tax_classes {
+  id         BigInt   @id @default(autoincrement())
+  name       String   @db.VarChar(100)
+  percent    Decimal  @db.Decimal(5, 2)
+  is_active  Boolean? @default(true)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  updated_at DateTime @default(now()) @db.Timestamp(0)
+}
+
+model tds_tcs_entries {
+  id           BigInt               @id @default(autoincrement())
+  company_id   BigInt
+  type         tds_tcs_entries_type
+  customer_id  BigInt?
+  vendor_id    BigInt?
+  party_name   String?              @db.VarChar(255)
+  pan          String?              @db.VarChar(15)
+  amount       Decimal              @db.Decimal(15, 2)
+  rate_percent Decimal              @db.Decimal(6, 3)
+  tax_amount   Decimal              @db.Decimal(15, 2)
+  entry_date   DateTime             @db.Date
+  reference_no String?              @db.VarChar(50)
+  note         String?              @db.VarChar(255)
+  created_at   DateTime             @default(now()) @db.Timestamp(0)
+
+  @@index([customer_id], map: "customer_id")
+  @@index([company_id, entry_date], map: "idx_tds_date")
+  @@index([pan, entry_date], map: "idx_tds_pan_date")
+  @@index([type, entry_date], map: "idx_tds_type_date")
+  @@index([vendor_id], map: "vendor_id")
+}
+
+model terms_conditions {
+  id             BigInt   @id @default(autoincrement())
+  invoice_id     BigInt?
+  condition_text String?  @db.Text
+  created_at     DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([invoice_id], map: "invoice_id")
+}
+
+model units {
+  id          BigInt   @id @default(autoincrement())
+  company_id  BigInt?
+  unit_name   String?  @db.VarChar(50)
+  short_code  String?  @db.VarChar(10)
+  description String?  @db.Text
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+}
+
+model vendor_payment_bills {
+  id                  BigInt   @id @default(autoincrement())
+  vendor_payment_id   BigInt?
+  supplier_account_id BigInt?
+  description         String?  @db.VarChar(255)
+  total_amount        Decimal? @db.Decimal(15, 2)
+  outstanding_amount  Decimal? @db.Decimal(15, 2)
+  amount_to_pay       Decimal? @db.Decimal(15, 2)
+  is_selected         Boolean? @default(false)
+  created_at          DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([supplier_account_id], map: "supplier_account_id")
+  @@index([vendor_payment_id], map: "vendor_payment_id")
+}
+
+model vendor_payment_discounts {
+  id                BigInt   @id @default(autoincrement())
+  vendor_payment_id BigInt?
+  discount_type     String?  @db.VarChar(100)
+  discount_percent  Decimal? @db.Decimal(7, 3)
+  sub_total_before  Decimal? @db.Decimal(15, 2)
+  discount_value    Decimal? @db.Decimal(15, 2)
+  sub_total_after   Decimal? @db.Decimal(15, 2)
+  created_at        DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([vendor_payment_id], map: "vendor_payment_id")
+}
+
+model vendor_payment_tds {
+  id                BigInt   @id @default(autoincrement())
+  vendor_payment_id BigInt?
+  tax_percentage    Decimal? @db.Decimal(5, 2)
+  tax_amount        Decimal? @db.Decimal(15, 2)
+  created_at        DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([vendor_payment_id], map: "vendor_payment_id")
+}
+
+model vendor_payments {
+  id                BigInt                        @id @default(autoincrement())
+  company_id        BigInt?
+  auto_payment_no   String?                       @db.VarChar(50)
+  manual_payment_no String?                       @db.VarChar(50)
+  voucher_date      DateTime?                     @db.Date
+  paid_from         vendor_payments_paid_from?
+  paid_to_id        BigInt?
+  upload_document   String?                       @db.VarChar(255)
+  payment_mode      vendor_payments_payment_mode?
+  sub_total         Decimal?                      @db.Decimal(15, 2)
+  total_amount      Decimal?                      @db.Decimal(15, 2)
+  narration         String?                       @db.Text
+  status            vendor_payments_status?       @default(Draft)
+  created_by        BigInt?
+  created_at        DateTime                      @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+  @@index([created_by], map: "created_by")
+  @@index([paid_to_id], map: "paid_to_id")
+}
+
+model vendors {
+  id                  BigInt                @id @default(autoincrement())
+  company_id          BigInt?
+  account_id          BigInt?
+  name_en             String?               @db.VarChar(255)
+  name_ar             String?               @db.VarChar(255)
+  company_name        String?               @db.VarChar(255)
+  google_location     String?               @db.VarChar(500)
+  id_card_url         String?               @db.VarChar(255)
+  file_url            String?               @db.VarChar(255)
+  account_type        vendors_account_type?
+  balance_type        vendors_balance_type?
+  account_balance     Decimal?              @db.Decimal(15, 2)
+  creation_date       DateTime?             @db.Date
+  bank_account_number String?               @db.VarChar(50)
+  bank_ifsc           String?               @db.VarChar(20)
+  bank_name_branch    String?               @db.VarChar(255)
+  country             String?               @db.VarChar(100)
+  state               String?               @db.VarChar(100)
+  pincode             String?               @db.VarChar(20)
+  address             String?               @db.Text
+  state_code          String?               @db.VarChar(20)
+  shipping_address    String?               @db.Text
+  phone               String?               @db.VarChar(20)
+  email               String?               @db.VarChar(255)
+  credit_period       Int?
+  is_enabled          Boolean?
+  created_at          DateTime              @default(now()) @db.Timestamp(0)
+
+  @@index([account_id], map: "account_id")
+  @@index([company_id], map: "company_id")
+}
+
+model voucher_photos {
+  id         BigInt   @id @default(autoincrement())
+  voucher_id BigInt?
+  photo_url  String?  @db.VarChar(255)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([voucher_id], map: "voucher_id")
+}
+
+model voucher_products {
+  id           BigInt   @id @default(autoincrement())
+  voucher_id   BigInt?
+  product_name String?  @db.VarChar(255)
+  rate         Decimal? @db.Decimal(15, 2)
+  quantity     Decimal? @db.Decimal(15, 3)
+  amount       Decimal? @db.Decimal(15, 2)
+  created_at   DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([voucher_id], map: "voucher_id")
+}
+
+model voucher_references {
+  id         BigInt   @id @default(autoincrement())
+  voucher_id BigInt?
+  file_url   String?  @db.VarChar(255)
+  file_type  String?  @db.VarChar(50)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([voucher_id], map: "voucher_id")
+}
+
+model voucher_services {
+  id           BigInt   @id @default(autoincrement())
+  voucher_id   BigInt?
+  service_id   BigInt?
+  qty          Decimal? @db.Decimal(15, 3)
+  rate         Decimal? @db.Decimal(15, 2)
+  discount     Decimal? @db.Decimal(15, 2)
+  tax_id       BigInt?
+  tax_amount   Decimal? @db.Decimal(15, 2)
+  total_amount Decimal? @db.Decimal(15, 2)
+
+  @@index([service_id], map: "service_id")
+  @@index([tax_id], map: "tax_id")
+  @@index([voucher_id], map: "voucher_id")
+}
+
+model vouchers_master {
+  id               BigInt                        @id @default(autoincrement())
+  company_id       BigInt?
+  voucher_type     vouchers_master_voucher_type?
+  company_name     String?                       @db.VarChar(255)
+  company_logo     String?                       @db.VarChar(255)
+  from_customer_id BigInt?
+  to_name          String?                       @db.VarChar(255)
+  receipt_number   String?                       @db.VarChar(50)
+  voucher_number   String?                       @db.VarChar(50)
+  voucher_date     DateTime?                     @db.Date
+  subtotal         Decimal?                      @db.Decimal(15, 2)
+  total            Decimal?                      @db.Decimal(15, 2)
+  notes            String?                       @db.Text
+  created_by       BigInt?
+  created_at       DateTime                      @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+  @@index([created_by], map: "created_by")
+  @@index([from_customer_id], map: "from_customer_id")
+}
+
+model warehouses {
+  id             BigInt             @id @default(autoincrement())
+  company_id     BigInt?
+  warehouse_name String?            @db.VarChar(150)
+  location       String?            @db.VarChar(255)
+  contact_person String?            @db.VarChar(100)
+  phone          String?            @db.VarChar(20)
+  status         warehouses_status?
+  created_at     DateTime           @default(now()) @db.Timestamp(0)
+
+  @@index([company_id], map: "company_id")
+}
+
+enum CompanyStatus {
+  Active
+  Inactive
+}
+
+enum UserRole {
+  Admin
+  Accountant
+  Auditor
+  Viewer
+}
+
+enum YearStatus {
+  Open
+  Closed
+}
+
+enum VoucherType {
+  Sales
+  Purchase
+  Payment
+  Receipt
+  Journal
+  Contra
+  CreditNote
+  DebitNote
+}
+
+enum TaxType {
+  GST
+  TDS
+  VAT
+  Other
+}
+
+enum DiscountType {
+  Allowed
+  Received
+}
+
+enum BillStatus {
+  Open
+  Partial
+  Closed
+}
+
+enum AuditAction {
+  INSERT
+  UPDATE
+  DELETE
+}
+
+enum ApprovalStatus {
+  Pending
+  Approved
+  Rejected
+}
+
+enum Frequency {
+  Daily
+  Weekly
+  Monthly
+  Yearly
+}
+
+enum RecurringStatus {
+  Active
+  Stopped
+}
+
+enum NotificationType {
+  Alert
+  Reminder
+  Approval
+  Renewal
+}
+
+enum BillingCycle {
+  Monthly
+  Yearly
+}
+
+enum PlanStatus {
+  Active
+  Inactive
+}
+
+enum RequestStatus {
+  Pending
+  Approved
+  Rejected
+}
+
+enum GatewayStatus {
+  Active
+  Inactive
+}
+
+enum Environment {
+  Test
+  Live
+}
+
+enum BalanceType {
+  Debit
+  Credit
+}
+
+enum VendorVchType {
+  Purchase
+  Payment
+  DebitNote
+  CreditNote
+  Adjustment
+}
+
+enum sales_attachments_reference_type {
+  Quotation
+  Order
+  Challan
+  Invoice
+  Payment
+}
+
+enum accounts_main_category {
+  Assets
+  Liabilities
+  Equity
+  Income
+  Expenses
+}
+
+enum expense_voucher_filters_filter_type {
+  PaymentNo
+  Account
+  PaidFrom
+  ManualReceiptNo
+}
+
+enum income_voucher_filters_filter_type {
+  ReceiptNo
+  Account
+  DepositedTo
+}
+
+enum order_headers_order_type {
+  Sales
+  Purchase
+}
+
+enum pos_payments_method {
+  Cash
+  Card
+  UPI
+  Bank_Transfer @map("Bank Transfer")
+  Cheque
+  Wallet
+  Other
+}
+
+enum receipt_discounts_discount_type {
+  Basic_Salary                         @map("Basic Salary")
+  Cartage
+  Commission_Given                     @map("Commission Given")
+  Currency_Exchange_Expenses           @map("Currency Exchange Expenses")
+  Customs_Clearance                    @map("Customs Clearance")
+  Discount_on_Sale                     @map("Discount on Sale")
+  Employee_State_Insurance_Corporation @map("Employee State Insurance Corporation")
+  Freight_Charge                       @map("Freight Charge")
+  House_Rent_Allowance__HRA_           @map("House Rent Allowance (HRA)")
+  Indices_CS_Expenses                  @map("Indices CS Expenses")
+  Medical_Allowance__MA_               @map("Medical Allowance (MA)")
+  Rubber_Expenses                      @map("Rubber Expenses")
+  Special_Allowance__SA_               @map("Special Allowance (SA)")
+}
+
+enum roles_role_type {
+  User
+  System
+}
+
+enum sales_report_category {
+  All
+  Computers
+  Electronics
+  Shoe
+}
+
+enum sales_return_audit_action {
+  Created
+  Updated
+  Approved
+  Rejected
+  Deleted
+}
+
+enum tds_tcs_entries_type {
+  TDS
+  TCS
+}
+
+enum vouchers_voucher_type {
+  Expense
+  Income
+  Contra
+  Journal
+  Credit_Note       @map("Credit Note")
+  Debit_Note        @map("Debit Note")
+  Opening_Balance   @map("Opening Balance")
+  Current_Balance   @map("Current Balance")
+  Closing_Balance   @map("Closing Balance")
+  Sales
+  Purchase
+  Delivery_Challans @map("Delivery Challans")
+}
+
+enum vouchers_master_voucher_type {
+  Expense
+  Income
+  Contra
+  Journal
+  Credit_Note       @map("Credit Note")
+  Debit_Note        @map("Debit Note")
+  Opening_Balance   @map("Opening Balance")
+  Current_Balance   @map("Current Balance")
+  Closing_Balance   @map("Closing Balance")
+  Sales
+  Purchase
+  Delivery_Challans @map("Delivery Challans")
+}
+
+enum gst_returns_return_type {
+  GSTR_1  @map("GSTR-1")
+  GSTR_2A @map("GSTR-2A")
+  GSTR_3B @map("GSTR-3B")
+}
+
+enum inventory_ledger_transaction_type {
+  Purchase
+  Sale
+  Transfer
+  Adjustment
+}
+
+enum product_import_export_logs_action {
+  Import
+  Export
+  DownloadTemplate
+}
+
+enum roles_status {
+  Active
+  Inactive
+}
+
+enum add_transactions_balance_type {
+  Receive
+  Pay
+}
+
+enum add_transactions_voucher_type {
+  Sales
+  Purchase
+  Payment
+  Receipt
+  Journal
+  Contra
+  CreditNote
+  DebitNote
+}
+
+enum expense_vouchers_paid_from {
+  Cash
+  Bank_Transfer @map("Bank Transfer")
+  Credit_Card   @map("Credit Card")
+  Paypal
+}
+
+enum income_vouchers_deposited_to {
+  Cash
+  Bank_Account   @map("Bank Account")
+  Credit_Card    @map("Credit Card")
+  Online_Payment @map("Online Payment")
+}
+
+enum received_from_customer_received_into {
+  Cash
+  Bank
+  Shop
+  Account
+}
+
+enum returns_return_type {
+  Sales
+  Purchase
+}
+
+enum vendor_payments_paid_from {
+  Cash_In_Hand    @map("Cash In Hand")
+  Bank_Account    @map("Bank Account")
+  Credit_Card     @map("Credit Card")
+  Online_Transfer @map("Online Transfer")
+}
+
+enum customer_ledger_vch_type {
+  Opening
+  Sales
+  Receipt
+  Sales_Return @map("Sales Return")
+  Payment
+  Adjustment
+}
+
+enum eway_bills_doc_type {
+  INV
+  BILTI
+  CHALLAN
+  OTHERS
+}
+
+enum ledger_entries_vch_type {
+  Sales
+  Payment
+  Receipt
+  Purchase
+  Adjustment
+}
+
+enum pos_payments_status {
+  completed
+  refunded
+  void
+}
+
+enum sales_payments_payment_method {
+  Cash
+  UPI
+  BankTransfer
+  Card
+  Cheque
+  Other
+}
+
+enum users_status {
+  Active
+  Inactive
+}
+
+enum warehouses_status {
+  Active
+  Inactive
+}
+
+enum customer_balance_confirms_balance_type {
+  Debit
+  Credit
+}
+
+enum customers_account_type {
+  Sundry_Debtors @map("Sundry Debtors")
+}
+
+enum invoices_status {
+  Paid
+  Unpaid
+  Partial
+  Overdue
+}
+
+enum invoice_items_discount_type {
+  Flat
+  Percentage
+}
+
+enum purchase_bills_status {
+  Open
+  Partial
+  Closed
+}
+
+enum received_from_customer_receipt_type {
+  Invoice
+  Discount
+  TaxDeducted
+}
+
+enum return_items_discount_type {
+  Flat
+  Percentage
+}
+
+enum vendor_payments_payment_mode {
+  BillPayment
+  DiscountReceived
+  TaxDeductedAtSource
+}
+
+enum customers_balance_type {
+  Debit
+  Credit
+}
+
+enum customer_balance_confirms_status {
+  draft
+  sent
+  confirmed
+}
+
+enum expense_vouchers_status {
+  Draft
+  Submitted
+  Approved
+  Rejected
+}
+
+enum gst_returns_status {
+  Filed
+  Not_Filed   @map("Not Filed")
+  In_Progress @map("In Progress")
+  Error
+}
+
+enum income_vouchers_status {
+  Draft
+  Submitted
+  Approved
+  Rejected
+}
+
+enum invoices_payment_status {
+  Paid
+  Unpaid
+  Partial
+}
+
+enum vendors_account_type {
+  Sundry_Creditors @map("Sundry Creditors")
+  Other
+}
+
+enum contra_vouchers_status {
+  Draft
+  Submitted
+  Approved
+  Rejected
+}
+
+enum goods_receipts_status {
+  Draft
+  Received
+  PartiallyReceived
+  Cancelled
+}
+
+enum invoices_payment_method {
+  Cash
+  Card
+  BankTransfer
+  Online
+  Other
+}
+
+enum returns_status {
+  Open
+  Processed
+  Closed
+}
+
+enum sales_returns_return_type {
+  Sales_Return @map("Sales Return")
+  Replacement
+  Other
+}
+
+enum stock_transfers_status {
+  Draft
+  Saved
+  Approved
+  Completed
+}
+
+enum vendors_balance_type {
+  Debit
+  Credit
+}
+
+enum add_transactions_account_type {
+  Customer
+  Vendor
+  Bank
+  Cash
+  Other
+}
+
+enum delivery_challans_status {
+  Draft
+  Dispatched
+  Delivered
+  Returned
+}
+
+enum sales_payments_status {
+  Pending
+  Completed
+  Failed
+}
+
+enum itc_entries_status {
+  Claimed
+  Pending
+}
+
+enum vendor_payments_status {
+  Draft
+  Submitted
+  Approved
+  Rejected
+}
+
+enum sales_quotations_status {
+  Draft
+  Sent
+  Accepted
+  Rejected
+  Converted
+}
+
+enum pos_orders_payment_status {
+  Due
+  Partial
+  Paid
+}
+
+enum sales_invoices_status {
+  Draft
+  Unpaid
+  PartiallyPaid
+  Paid
+  Cancelled
+}
+
+enum sales_returns_status {
+  Draft
+  Pending_Inspection @map("Pending Inspection")
+  Approved
+  Rejected
+  Completed
+}
+
+enum sales_orders_status {
+  Draft
+  Confirmed
+  PartiallyDelivered
+  Completed
+  Cancelled
+}
+
+enum order_headers_status {
+  Draft
+  Confirmed
+  PartiallyDelivered
+  Delivered
+  Cancelled
+}
+
+enum products_status {
+  InStock
+  OutOfStock
+  Inactive
+}
+
+enum purchase_quotations_status {
+  Draft
+  Sent
+  Accepted
+  Rejected
+  Converted
+}
+
+enum eway_bills_transport_mode {
+  Road
+  Rail
+  Air
+  Ship
+}
+
+enum eway_bills_status {
+  Active
+  Cancelled
+  Expired
+}
