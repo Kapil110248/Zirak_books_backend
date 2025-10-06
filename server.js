@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
 import accountsRoutes from "./src/routes/accounts.routes.js";
 import customerRoutes from './src/routes/customer.routes.js';
+import unitRoutes from "./src/routes/unit.routes.js";
 
 dotenv.config();
 const app = express();
@@ -16,6 +17,7 @@ app.use(express.json());
 //Routes
 app.use("/api/accounts", accountsRoutes);
 app.use('/api/customers', customerRoutes);
+app.use("/api/units", unitRoutes);
 
 // Example route
 app.get("/", (req, res) => {

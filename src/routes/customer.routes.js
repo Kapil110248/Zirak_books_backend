@@ -14,7 +14,7 @@ const router = express.Router();
 router.use(fileUpload({ useTempFiles: true }));
 
 // Authenticated routes
-router.post("/", createCustomer);
+router.post("/",      createCustomer);
 router.get("/", getAllCustomers);
 router.get("/:id", getCustomerById);
 router.put("/:id", updateCustomer);

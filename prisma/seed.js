@@ -5,29 +5,17 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Seeding database...");
 
-  // Example: Add a default company
-  const company = await prisma.companies.create({
+  // Unit create
+  const unit = await prisma.unit.create({
     data: {
-      name: "Demo Company Pvt Ltd",
-      email: "demo@company.com",
-      status: "Active",
-      created_at: new Date(),
+      name: "Kilogram",
+      weightPerUnit: 1,
+      unitOfMeasure: "Weight", // <-- camelCase field name
+      // createdAt aur updatedAt optional hai, Prisma default handle karega
     },
   });
 
-  // Example: Add an admin user
-  await prisma.users.create({
-    data: {
-      company_id: company.id,
-      name: "Admin User",
-      email: "admin@demo.com",
-      role: "Admin",
-      password: "hashed_password_here", // later hash it properly
-      created_at: new Date(),
-    },
-  });
-
-  console.log("✅ Seed data inserted successfully!");
+  console.log("Unit created:", unit);
 }
 
 main()
@@ -38,3 +26,4 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+

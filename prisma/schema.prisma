@@ -453,12 +453,6 @@ model add_transactions {
   @@index([to_account_id], map: "to_account_id")
 }
 
-model add_units {
-  id              BigInt   @id @default(autoincrement())
-  unit_of_measure String?  @db.VarChar(100)
-  created_at      DateTime @default(now()) @db.Timestamp(0)
-}
-
 model bank_details {
   id             Int      @id @default(autoincrement())
   bank_name      String   @db.VarChar(255)
@@ -574,7 +568,7 @@ model customers {
   credit_period_days  Int?                    @default(0)
   is_active           Boolean?                @default(true)
   created_at          DateTime                @default(now()) @db.Timestamp(0)
-  updated_at          DateTime?               @default(now()) @updatedAt @db.Timestamp(0)
+  updated_at          DateTime                @default(dbgenerated("('0000-00-00 00:00:00')")) @updatedAt @db.Timestamp(0)
 
   @@index([email], map: "idx_cust_email")
   @@index([name_english], map: "idx_cust_name")
@@ -1775,6 +1769,21 @@ model warehouses {
   created_at     DateTime           @default(now()) @db.Timestamp(0)
 
   @@index([company_id], map: "company_id")
+}
+
+model add_units {
+  id              BigInt   @id @default(autoincrement())
+  unit_of_measure String?  @db.VarChar(100)
+  created_at      DateTime @default(now()) @db.Timestamp(0)
+}
+
+model unit {
+  id            Int       @id @default(autoincrement())
+  name          String    @db.VarChar(255)
+  weightPerUnit Float     @db.Float
+  unitOfMeasure String    @db.VarChar(255)
+  createdAt     DateTime? @default(now()) @db.DateTime(0)
+  updatedAt     DateTime? @default(now()) @db.DateTime(0)
 }
 
 enum CompanyStatus {
