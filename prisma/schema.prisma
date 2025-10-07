@@ -1555,7 +1555,7 @@ model tax_classes {
 
 model tds_tcs_entries {
   id           BigInt               @id @default(autoincrement())
-  company_id   BigInt
+  company_id   BigInt?
   type         tds_tcs_entries_type
   customer_id  BigInt?
   vendor_id    BigInt?
